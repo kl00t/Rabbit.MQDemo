@@ -1,6 +1,7 @@
 ﻿using Rabbit.Configuration;
 using RabbitMQ.Client;
 using System.Text;
+using System.Text.Json;
 
 ConnectionFactory factory = new()
 {
@@ -18,7 +19,8 @@ channel.QueueBind(ConfigurationConstants.QueueName, ConfigurationConstants.Excha
 int messagesToSend = 60;
 for (int i = 0; i < messagesToSend; i++)
 {
-    var message = $"Hello World! : Message #{i} : {Guid.NewGuid()}";
+    var widget = new Widget($"Widget #{i}");
+    var message = JsonSerializer.Serialize(widget);
     Console.WriteLine($"Message Sent: {message}");
     byte[] messageBodyBytes = Encoding.UTF8.GetBytes(message);
     channel.BasicPublish(ConfigurationConstants.ExchangeName, ConfigurationConstants.RoutingKey, null, messageBodyBytes);

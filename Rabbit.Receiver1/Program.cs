@@ -2,6 +2,7 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
+using System.Text.Json;
 
 ConnectionFactory factory = new()
 {
@@ -23,7 +24,8 @@ consumer.Received += (sender, args) =>
     Task.Delay(TimeSpan.FromSeconds(5)).Wait();
     var body = args.Body.ToArray();
     string message = Encoding.UTF8.GetString(body);
-    Console.WriteLine($"Message Received: {message}");
+    var widget = JsonSerializer.Deserialize<Widget>(message)!;
+    Console.WriteLine($"Id: {widget.Id}\nName: {widget.Name}");
     channel.BasicAck(args.DeliveryTag, false);
 };
 
