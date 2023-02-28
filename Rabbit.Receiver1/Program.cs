@@ -1,5 +1,6 @@
 ﻿using Rabbit.Configuration;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using System.Text;
 
 ConnectionFactory factory = new()
@@ -14,17 +15,22 @@ IModel channel = connection.CreateModel();
 channel.ExchangeDeclare(ConfigurationConstants.ExchangeName, ExchangeType.Direct);
 channel.QueueDeclare(ConfigurationConstants.QueueName, false, false, false, null);
 channel.QueueBind(ConfigurationConstants.QueueName, ConfigurationConstants.ExchangeName, ConfigurationConstants.RoutingKey, null);
+channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
 
-int messagesToSend = 60;
-for (int i = 0; i < messagesToSend; i++)
+var consumer = new EventingBasicConsumer(channel);
+consumer.Received += (sender, args) =>
 {
-    var message = $"Hello World! : Message #{i} : {Guid.NewGuid()}";
-    Console.WriteLine($"Message Sent: {message}");
-    byte[] messageBodyBytes = Encoding.UTF8.GetBytes(message);
-    channel.BasicPublish(ConfigurationConstants.ExchangeName, ConfigurationConstants.RoutingKey, null, messageBodyBytes);
-    Thread.Sleep(1000);
-}
+    Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+    var body = args.Body.ToArray();
+    string message = Encoding.UTF8.GetString(body);
+    Console.WriteLine($"Message Received: {message}");
+    channel.BasicAck(args.DeliveryTag, false);
+};
+
+string consumerTag = channel.BasicConsume(ConfigurationConstants.QueueName, false, consumer);
+Console.ReadLine();
+
+channel.BasicCancel(consumerTag);
 
 channel.Close();
 connection.Close();
-Console.ReadLine();
